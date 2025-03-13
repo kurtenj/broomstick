@@ -25,4 +25,11 @@ export default tseslint.config(
       ],
     },
   },
+  // Disable react-refresh for specific files
+  {
+    files: ['**/contexts/AuthContext.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 )

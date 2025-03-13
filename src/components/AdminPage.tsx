@@ -3,7 +3,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firesto
 import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { addUserToWhitelist, isUserAdmin } from '@/contexts/AuthContext';
+import { addUserToWhitelist, isUserAdmin } from '@/services/userService';
 
 interface AuthorizedUser {
   email: string;

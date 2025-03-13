@@ -18,7 +18,6 @@ export function SweepsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
-  const [shareLinks, setShareLinks] = useState<Record<string, string>>({});
 
   const fetchSweeps = async () => {
     try {
@@ -96,12 +95,6 @@ export function SweepsPage() {
     try {
       setSharing(id);
       const shareLink = await getShareLink(id);
-      
-      // Store the share link in state
-      setShareLinks(prev => ({
-        ...prev,
-        [id]: shareLink
-      }));
       
       // Copy to clipboard
       await navigator.clipboard.writeText(shareLink);
