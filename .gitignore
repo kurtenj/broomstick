@@ -41,3 +41,15 @@ build
 
 # TypeScript
 *.tsbuildinfo 
+
+# Documentation (internal only)
+docs/
+
+# Sensitive files
+*.pem
+*.key
+*secret*
+*credential*
+*password*
+*token*
+firebase-adminsdk*.json 
