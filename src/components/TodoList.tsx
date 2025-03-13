@@ -57,7 +57,7 @@ export function TodoList({ items, onAddItem, onUpdateItem, onDeleteItem }: TodoL
   };
 
   return (
-    <div className="space-y-6 w-full max-w-3xl mx-auto">
+    <div className="space-y-6 w-full mx-auto">
       <div className="space-y-3">
         <div className="flex gap-3 items-center">
           <Input

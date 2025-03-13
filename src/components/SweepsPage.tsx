@@ -111,11 +111,6 @@ export function SweepsPage() {
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-3">
-          <img 
-            src="/images/broomstick-icon.svg" 
-            alt="Broomstick Icon" 
-            className="h-8 w-8"
-          />
           <h1 className="text-3xl font-bold">All Sweeps</h1>
         </div>
         <Button onClick={handleCreateNew} disabled={creating}>

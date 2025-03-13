@@ -43,43 +43,45 @@ function App() {
         <Router>
           <div className="min-h-screen">
             <Navigation />
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/shared/:token" element={<SharedSweepPage />} />
-                
-                {/* Protected routes */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <HomePage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/sweep/:id" element={
-                  <ProtectedRoute>
-                    <SweepPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/sweeps" element={
-                  <ProtectedRoute>
-                    <SweepsPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin" element={
-                  <ProtectedRoute>
-                    <AdminPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/image-examples" element={
-                  <ProtectedRoute>
-                    <ImageExample />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Fallback route */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
+            <div className="pt-16">
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/shared/:token" element={<SharedSweepPage />} />
+                  
+                  {/* Protected routes */}
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <HomePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/sweep/:id" element={
+                    <ProtectedRoute>
+                      <SweepPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/sweeps" element={
+                    <ProtectedRoute>
+                      <SweepsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <ProtectedRoute>
+                      <AdminPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/image-examples" element={
+                    <ProtectedRoute>
+                      <ImageExample />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Fallback route */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </div>
           </div>
         </Router>
       </AuthProvider>

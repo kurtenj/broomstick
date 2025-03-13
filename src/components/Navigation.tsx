@@ -29,7 +29,7 @@ export function Navigation() {
   }
 
   return (
-    <nav className="bg-white shadow-sm">
+    <nav className="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -54,9 +54,8 @@ export function Navigation() {
                 </Link>
                 <div className="flex items-center ml-4">
                   <span className="text-sm text-gray-500 mr-2">{currentUser.email}</span>
-                  <Button variant="outline" size="sm" onClick={handleSignOut}>
-                    <LogOut className="h-4 w-4 mr-1" />
-                    Sign Out
+                  <Button variant="outline" size="icon" onClick={handleSignOut} title="Sign Out">
+                    <LogOut className="h-4 w-4" />
                   </Button>
                 </div>
               </>
