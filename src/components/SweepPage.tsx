@@ -10,12 +10,16 @@ import {
   updateTodoItem, 
   deleteTodoItem,
   extendSweep,
-  updateSweepTitle
+  updateSweepTitle,
+  toggleSweepPublicAccess,
+  getShareLink
 } from '@/services/sweepService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function SweepPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentUser, isAuthorized } = useAuth();
   const [sweep, setSweep] = useState<Sweep | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +28,17 @@ export function SweepPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [updatingTitle, setUpdatingTitle] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // Check authentication
+  useEffect(() => {
+    if (!currentUser && !isAuthorized && !loading) {
+      navigate('/login', { state: { from: `/sweep/${id}` } });
+    }
+  }, [currentUser, isAuthorized, id, navigate, loading]);
 
   useEffect(() => {
     if (!id) {
@@ -157,6 +171,48 @@ export function SweepPage() {
     }
   };
 
+  // Handle sharing the sweep
+  const handleShare = async () => {
+    if (!sweep || !id) return;
+    
+    try {
+      setSharing(true);
+      const link = await getShareLink(id);
+      setShareLink(link);
+    } catch (err) {
+      console.error('Error generating share link:', err);
+      setError('Failed to generate share link');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  // Copy share link to clipboard
+  const handleCopyShareLink = () => {
+    if (!shareLink) return;
+    
+    navigator.clipboard.writeText(shareLink)
+      .then(() => {
+        setShareLinkCopied(true);
+        setTimeout(() => setShareLinkCopied(false), 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy share link:', err);
+      });
+  };
+
+  // Toggle public access
+  const handleTogglePublicAccess = async () => {
+    if (!sweep || !id) return;
+    
+    try {
+      await toggleSweepPublicAccess(id, !sweep.isPublic);
+    } catch (err) {
+      console.error('Error toggling public access:', err);
+      setError('Failed to update sharing settings');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -177,7 +233,7 @@ export function SweepPage() {
   const daysRemaining = getDaysRemaining();
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
         <div>
           <Button variant="outline" size="sm" onClick={handleBackToSweeps}>
@@ -199,33 +255,95 @@ export function SweepPage() {
         </div>
       </div>
 
-      <div className="mb-6">
-        {isEditingTitle ? (
-          <div className="flex items-center">
-            <Input
-              ref={titleInputRef}
-              value={newTitle}
-              onChange={handleTitleChange}
-              onKeyDown={handleTitleKeyDown}
-              onBlur={handleSaveTitle}
-              className="text-2xl font-bold h-auto py-1 px-0 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent w-full"
-              placeholder="Enter sweep title"
-              disabled={updatingTitle}
-              style={{ fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 'inherit' }}
-            />
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          {isEditingTitle ? (
+            <div className="flex-1">
+              <Input
+                ref={titleInputRef}
+                type="text"
+                value={newTitle}
+                onChange={handleTitleChange}
+                onKeyDown={handleTitleKeyDown}
+                className="text-xl font-bold"
+                disabled={updatingTitle}
+                onBlur={handleSaveTitle}
+                autoFocus
+              />
+            </div>
+          ) : (
+            <h1 
+              className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors"
+              onClick={handleStartEditingTitle}
+            >
+              {sweep?.title || 'Untitled Sweep'}
+            </h1>
+          )}
+          
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleBackToSweeps}
+            >
+              All Sweeps
+            </Button>
+            
+            <Button 
+              variant={sweep?.isPublic ? "default" : "outline"}
+              size="sm"
+              onClick={handleTogglePublicAccess}
+              className="ml-2"
+            >
+              {sweep?.isPublic ? 'Public' : 'Private'}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleShare}
+              disabled={sharing}
+              className="ml-2"
+            >
+              {sharing ? 'Generating...' : 'Share'}
+            </Button>
           </div>
-        ) : (
-          <h1 
-            className="text-2xl font-bold cursor-pointer hover:text-primary/80 transition-colors"
-            onClick={handleStartEditingTitle}
-            title="Click to edit title"
-          >
-            {sweep.title || 'Untitled Sweep'}
-          </h1>
+        </div>
+        
+        {shareLink && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-700 truncate mr-2">
+                {shareLink}
+              </p>
+              <Button 
+                size="sm" 
+                onClick={handleCopyShareLink}
+              >
+                {shareLinkCopied ? 'Copied!' : 'Copy Link'}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Anyone with this link can view and mark items as complete
+            </p>
+          </div>
         )}
-        <p className="text-muted-foreground">
-          Expires on {sweep.expiresAt.toLocaleDateString()} at {sweep.expiresAt.toLocaleTimeString()}
-        </p>
+        
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-gray-500">
+            Expires: {sweep?.expiresAt.toLocaleDateString()} 
+            ({getDaysRemaining()} days remaining)
+          </p>
+          
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExtend}
+            disabled={extending}
+          >
+            {extending ? 'Extending...' : 'Extend (3 days)'}
+          </Button>
+        </div>
       </div>
 
       {error && (

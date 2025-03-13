@@ -8,10 +8,19 @@ import {
   onSnapshot,
   Timestamp,
   deleteDoc,
-  getDocs
+  getDocs,
+  query,
+  where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Sweep, TodoItem } from '@/types';
+import { getAuth } from 'firebase/auth';
+
+// Generate a random token for public access
+const generatePublicToken = (): string => {
+  return Math.random().toString(36).substring(2, 15) + 
+         Math.random().toString(36).substring(2, 15);
+};
 
 // Create a new sweep
 export const createSweep = async (title?: string): Promise<string> => {
@@ -25,11 +34,19 @@ export const createSweep = async (title?: string): Promise<string> => {
     const expiresAt = new Date(now);
     expiresAt.setDate(expiresAt.getDate() + 3); // Expires in 3 days
 
+    // Get current user
+    const auth = getAuth();
+    const user = auth.currentUser;
+
     const sweep: Omit<Sweep, 'id'> = {
       createdAt: now,
       expiresAt,
       todos: [],
+      isPublic: false,
+      publicAccessToken: generatePublicToken(),
       ...(title && { title }),
+      ...(user && { createdBy: user.email || user.uid }),
+      ...(user && { modifiedBy: user.email || user.uid }),
     };
 
     console.log('Preparing sweep data:', sweep);
@@ -65,7 +82,42 @@ export const getSweep = async (id: string): Promise<Sweep | null> => {
     expiresAt: data.expiresAt.toDate(),
     title: data.title,
     todos: data.todos || [],
+    isPublic: data.isPublic || false,
+    publicAccessToken: data.publicAccessToken,
+    createdBy: data.createdBy,
+    modifiedBy: data.modifiedBy
   };
+};
+
+// Get a sweep by public token
+export const getSweepByToken = async (token: string): Promise<Sweep | null> => {
+  try {
+    const sweepsRef = collection(db, 'sweeps');
+    const q = query(sweepsRef, where('publicAccessToken', '==', token), where('isPublic', '==', true));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const doc = querySnapshot.docs[0];
+    const data = doc.data();
+    
+    return {
+      id: doc.id,
+      createdAt: data.createdAt.toDate(),
+      expiresAt: data.expiresAt.toDate(),
+      title: data.title,
+      todos: data.todos || [],
+      isPublic: data.isPublic,
+      publicAccessToken: data.publicAccessToken,
+      createdBy: data.createdBy,
+      modifiedBy: data.modifiedBy
+    };
+  } catch (error) {
+    console.error('Error getting sweep by token:', error);
+    return null;
+  }
 };
 
 // Subscribe to a sweep's changes
@@ -88,8 +140,49 @@ export const subscribeSweep = (
       expiresAt: data.expiresAt.toDate(),
       title: data.title,
       todos: data.todos || [],
+      isPublic: data.isPublic || false,
+      publicAccessToken: data.publicAccessToken,
+      createdBy: data.createdBy,
+      modifiedBy: data.modifiedBy
     });
   });
+};
+
+// Toggle public access for a sweep
+export const toggleSweepPublicAccess = async (sweepId: string, isPublic: boolean): Promise<void> => {
+  const sweepRef = doc(db, 'sweeps', sweepId);
+  
+  // Get current user
+  const auth = getAuth();
+  const user = auth.currentUser;
+  
+  await updateDoc(sweepRef, { 
+    isPublic,
+    modifiedBy: user?.email || user?.uid || 'anonymous',
+    ...(isPublic && { publicAccessToken: generatePublicToken() })
+  });
+};
+
+// Get share link for a sweep
+export const getShareLink = async (sweepId: string): Promise<string> => {
+  const sweep = await getSweep(sweepId);
+  
+  if (!sweep) {
+    throw new Error('Sweep not found');
+  }
+  
+  if (!sweep.isPublic) {
+    // Make the sweep public first
+    await toggleSweepPublicAccess(sweepId, true);
+    // Get the updated sweep
+    const updatedSweep = await getSweep(sweepId);
+    if (!updatedSweep || !updatedSweep.publicAccessToken) {
+      throw new Error('Failed to generate share link');
+    }
+    return `${window.location.origin}/shared/${updatedSweep.publicAccessToken}`;
+  }
+  
+  return `${window.location.origin}/shared/${sweep.publicAccessToken}`;
 };
 
 // Helper function to optimize image before storing as base64

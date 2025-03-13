@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { createSweep, checkFirestoreSetup } from '@/services/sweepService';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { currentUser, isAuthorized, signInWithGoogle } = useAuth();
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [firestoreStatus, setFirestoreStatus] = useState<'checking' | 'ready' | 'error'>('checking');
@@ -45,6 +47,14 @@ export function HomePage() {
     navigate('/sweeps');
   };
 
+  const handleLogin = () => {
+    signInWithGoogle();
+  };
+
+  const handleAdminPanel = () => {
+    navigate('/admin');
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <div className="max-w-md w-full space-y-8 text-center">
@@ -62,22 +72,41 @@ export function HomePage() {
         </div>
 
         <div className="mt-8 space-y-4">
-          <Button 
-            onClick={handleCreateSweep}
-            disabled={creating || firestoreStatus !== 'ready'}
-            className="w-full"
-          >
-            {creating ? 'Creating...' : 'Create New Sweep'}
-          </Button>
+          {currentUser && isAuthorized ? (
+            <>
+              <Button 
+                onClick={handleCreateSweep}
+                disabled={creating || firestoreStatus !== 'ready'}
+                className="w-full"
+              >
+                {creating ? 'Creating...' : 'Create New Sweep'}
+              </Button>
 
-          <Button 
-            onClick={handleViewAllSweeps}
-            variant="outline"
-            className="w-full"
-            disabled={firestoreStatus !== 'ready'}
-          >
-            View All Sweeps
-          </Button>
+              <Button 
+                onClick={handleViewAllSweeps}
+                variant="outline"
+                className="w-full"
+                disabled={firestoreStatus !== 'ready'}
+              >
+                View All Sweeps
+              </Button>
+
+              <Button 
+                onClick={handleAdminPanel}
+                variant="outline"
+                className="w-full"
+              >
+                Admin Panel
+              </Button>
+            </>
+          ) : (
+            <Button 
+              onClick={handleLogin}
+              className="w-full"
+            >
+              Sign in with Google
+            </Button>
+          )}
 
           {firestoreStatus === 'checking' && (
             <div className="text-blue-500 mt-2">Checking Firebase connection...</div>

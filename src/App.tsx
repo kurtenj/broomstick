@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Navigation } from '@/components/Navigation';
 import './App.css'; // Import our custom CSS
 
 // Lazy load components with named exports
@@ -16,6 +19,15 @@ const SweepsPage = lazy(() =>
 const ImageExample = lazy(() => 
   import('@/components/ImageExample').then(module => ({ default: module.ImageExample }))
 );
+const LoginPage = lazy(() => 
+  import('@/components/LoginPage').then(module => ({ default: module.LoginPage }))
+);
+const AdminPage = lazy(() => 
+  import('@/components/AdminPage').then(module => ({ default: module.AdminPage }))
+);
+const SharedSweepPage = lazy(() => 
+  import('@/components/SharedSweepPage').then(module => ({ default: module.SharedSweepPage }))
+);
 
 // Loading component
 const LoadingFallback = () => (
@@ -27,19 +39,50 @@ const LoadingFallback = () => (
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <div className="min-h-screen">
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/sweep/:id" element={<SweepPage />} />
-              <Route path="/sweeps" element={<SweepsPage />} />
-              <Route path="/image-examples" element={<ImageExample />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </div>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen">
+            <Navigation />
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/shared/:token" element={<SharedSweepPage />} />
+                
+                {/* Protected routes */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/sweep/:id" element={
+                  <ProtectedRoute>
+                    <SweepPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/sweeps" element={
+                  <ProtectedRoute>
+                    <SweepsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <AdminPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/image-examples" element={
+                  <ProtectedRoute>
+                    <ImageExample />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Fallback route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </div>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

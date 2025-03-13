@@ -11,12 +11,17 @@ A simple application for creating and managing "sweeps" - collections of todo it
 - View all sweeps in a dashboard
 - Delete sweeps when no longer needed
 - Automatic expiration of sweeps after 3 days
+- User authentication with Google Sign-In
+- Admin panel for user management
+- Public sharing of sweeps via unique links
+- Responsive design for mobile and desktop
 
 ## Technologies Used
 
 - React with TypeScript
 - Vite for build tooling
 - Firebase Firestore for data storage
+- Firebase Authentication for user management
 - Shadcn/UI for component styling
 - React Router for navigation
 - date-fns for date formatting
@@ -38,18 +43,35 @@ A simple application for creating and managing "sweeps" - collections of todo it
 
 1. Create a Firebase project at [firebase.google.com](https://firebase.google.com)
 2. Enable Firestore database
-3. Set up Firestore security rules:
+3. Enable Authentication and set up Google Sign-In provider
+4. Set up Firestore security rules:
    ```
    rules_version = '2';
    service cloud.firestore {
      match /databases/{database}/documents {
-       match /{document=**} {
-         allow read, write: if true;
+       match /sweeps/{document=**} {
+         // Allow public access to sweeps with public access enabled
+         allow read: if resource.data.isPublic == true;
+         // Allow authenticated users to read and write their own sweeps
+         allow read, write: if request.auth != null;
+       }
+       match /authorizedUsers/{userId} {
+         // Only allow admin users to read and write to the authorizedUsers collection
+         allow read, write: if request.auth != null && 
+                            exists(/databases/$(database)/documents/authorizedUsers/$(request.auth.uid)) &&
+                            get(/databases/$(database)/documents/authorizedUsers/$(request.auth.uid)).data.role == 'admin';
        }
      }
    }
    ```
-   Note: These rules allow unrestricted access and should be modified for production use.
+   Note: These rules restrict access based on authentication and should be modified for your specific needs.
+
+## Authentication Setup
+
+1. The first user to sign in will be automatically added as an admin
+2. Admins can invite additional users via the Admin Panel
+3. Only invited users can access the application
+4. Public sweeps can be viewed by anyone with the share link, even without authentication
 
 ## Deployment to Netlify
 

@@ -12,4 +12,8 @@ export interface Sweep {
   expiresAt: Date;
   title?: string;
   todos: TodoItem[];
+  isPublic?: boolean;
+  publicAccessToken?: string;
+  createdBy?: string;
+  modifiedBy?: string;
 } 
