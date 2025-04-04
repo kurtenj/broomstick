@@ -3,7 +3,7 @@ import { Sweep, TodoItem } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Plus, Pencil, Link as LinkIcon, Check, ImagePlus, X } from 'lucide-react'; // Removed CheckCircle, added ImagePlus and X icon
+import { Trash2, Pencil, Link as LinkIcon, Check, ImagePlus, X } from 'lucide-react'; // Removed Plus
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"; // Import Dialog
 import { cn } from "@/lib/utils"; // Import cn for conditional classes
 import { compressImage } from "@/lib/imageUtils"; // Import the compression utility
@@ -278,69 +278,71 @@ export function SweepView({
               <li 
                 key={todo.id} 
                 className={cn(
-                  "p-4 border border-gray-200 rounded-lg transition-colors flex items-start gap-3",
-                  !isPublicView && "cursor-pointer hover:bg-gray-50", // Hover effect only if selectable
-                  selectedTodoId === todo.id && "bg-blue-50 border-blue-300" // Selected style
+                  "p-4 border border-gray-200 rounded-lg transition-colors flex flex-row justify-between items-start gap-3",
+                  !isPublicView && "cursor-pointer hover:bg-gray-50",
+                  selectedTodoId === todo.id && "bg-blue-50 border-blue-300"
                 )}
-                onClick={() => !isPublicView && setSelectedTodoId(todo.id)} // Select on click in private view
+                onClick={() => !isPublicView && setSelectedTodoId(todo.id)}
               >
-                <Checkbox 
-                  id={`todo-${todo.id}`}
-                  checked={todo.completed}
-                  onCheckedChange={(checked) => 
-                    handleToggleCompleteInternal(todo.id, checked === true)
-                  }
-                  className="mt-1"
-                />
-                <div className="flex-1">
-                  <label 
-                    htmlFor={`todo-${todo.id}`}
-                    className={`text-lg ${todo.completed ? 'line-through text-gray-500' : ''}`}
-                  >
-                    {todo.text}
-                  </label>
-                  
-                  {/* Screenshot Thumbnail & Trigger */}
-                  {todo.screenshotUrl && (
-                    <DialogTrigger asChild>
-                      <div 
-                        className="mt-3 w-16 h-16 rounded border border-gray-200 overflow-hidden cursor-pointer hover:border-primary transition-colors group bg-gray-100 flex items-center justify-center" 
-                        onClick={(e) => { 
-                          e.stopPropagation(); // Prevent li onClick from firing
-                          setImageModalUrl(todo.screenshotUrl!)
-                        }}
-                        title="Click to enlarge screenshot"
-                      >
-                        <img 
-                          src={todo.screenshotUrl} 
-                          alt="Screenshot thumbnail" 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ease-in-out"
-                          loading="lazy" // Lazy load thumbnails
-                        />
-                      </div>
-                    </DialogTrigger>
-                  )}
+                <div className="flex items-start gap-3 flex-grow">
+                  <Checkbox 
+                    id={`todo-${todo.id}`}
+                    checked={todo.completed}
+                    onCheckedChange={(checked) => 
+                      handleToggleCompleteInternal(todo.id, checked === true)
+                    }
+                    className="mt-1 flex-shrink-0"
+                  />
+                  <div className="flex-grow">
+                    <label 
+                      htmlFor={`todo-${todo.id}`}
+                      className={`text-lg ${todo.completed ? 'line-through text-gray-500' : ''}`}
+                    >
+                      {todo.text}
+                    </label>
+                  </div>
                 </div>
-                
-                {/* Action Buttons (Private View Only) */}
-                {!isPublicView && (
-                  <div className="flex items-center mt-1"> {/* Just the delete button now */} 
-                    {onDeleteItem && (
+
+                <div className="flex items-start gap-2 flex-shrink-0">
+                  {todo.screenshotUrl && (
+                    <div className="w-16 h-16 flex-shrink-0">
+                      <DialogTrigger asChild>
+                        <div 
+                          className="w-full h-full rounded border border-gray-200 overflow-hidden cursor-pointer hover:border-primary transition-colors group bg-gray-100 flex items-center justify-center" 
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            setImageModalUrl(todo.screenshotUrl!)
+                          }}
+                          title="Click to enlarge screenshot"
+                        >
+                          <img 
+                            src={todo.screenshotUrl} 
+                            alt="Screenshot thumbnail" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ease-in-out"
+                            loading="lazy"
+                          />
+                        </div>
+                      </DialogTrigger>
+                    </div>
+                  )}
+
+                  {!isPublicView && onDeleteItem && (
+                    <div className="flex-shrink-0">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 mt-0.5"
                         onClick={(e) => { 
-                          e.stopPropagation(); // Prevent li onClick from firing
+                          e.stopPropagation();
                           handleDeleteItemInternal(todo.id)
                         }} 
                         title="Delete item"
                       >
                         <Trash2 size={16} />
                       </Button>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

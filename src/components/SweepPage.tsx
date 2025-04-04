@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { SweepView } from './SweepView';
 import { Sweep, TodoItem } from '@/types';
 import { 
@@ -13,7 +12,6 @@ import {
   getShareLink
 } from '@/services/sweepService';
 import { useAuth } from '@/contexts/AuthContext';
-import { Link as LinkIcon, Check } from 'lucide-react';
 import { AnimatedBroomLoader } from '@/components/AnimatedBroomLoader';
 
 export function SweepPage() {
@@ -107,10 +105,6 @@ export function SweepPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete todo item');
     }
-  };
-
-  const handleBackToSweeps = () => {
-    navigate('/sweeps');
   };
 
   const handleStartEditingTitle = () => {

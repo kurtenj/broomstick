@@ -566,4 +566,38 @@ export const subscribeSweepByToken = (
 
   // Return the unsubscribe function for cleanup
   return unsubscribe;
+};
+
+// Get sweeps created by a specific user
+export const getUserSweeps = async (userEmail: string): Promise<Sweep[]> => {
+  if (!userEmail) {
+    console.warn('getUserSweeps called without userEmail');
+    return [];
+  }
+  console.log(`Fetching sweeps for user: ${userEmail}`);
+  const sweepsRef = collection(db, 'sweeps');
+  const q = query(sweepsRef, where("createdBy", "==", userEmail));
+  
+  try {
+    const querySnapshot = await getDocs(q);
+    const sweeps: Sweep[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      sweeps.push({
+        id: doc.id,
+        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(), // Handle potential null/undefined timestamp
+        title: data.title,
+        todos: data.todos || [],
+        isPublic: data.isPublic,
+        publicAccessToken: data.publicAccessToken,
+        createdBy: data.createdBy,
+        modifiedBy: data.modifiedBy
+      });
+    });
+    console.log(`Found ${sweeps.length} sweeps for user ${userEmail}`);
+    return sweeps;
+  } catch (error) {
+    console.error(`Error fetching sweeps for user ${userEmail}:`, error);
+    throw error; // Re-throw to allow UI to handle error
+  }
 }; 

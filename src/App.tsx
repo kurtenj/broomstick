@@ -4,12 +4,10 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Navigation } from '@/components/Navigation';
+import { AnimatedBroomLoader } from '@/components/AnimatedBroomLoader';
 import './App.css'; // Import our custom CSS
 
 // Lazy load components with named exports
-const HomePage = lazy(() => 
-  import('@/components/HomePage').then(module => ({ default: module.HomePage }))
-);
 const SweepPage = lazy(() => 
   import('@/components/SweepPage').then(module => ({ default: module.SweepPage }))
 );
@@ -31,8 +29,8 @@ const SharedSweepPage = lazy(() =>
 
 // Loading component
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  <div className="flex items-center justify-center min-h-screen pt-16">
+    <AnimatedBroomLoader />
   </div>
 );
 
@@ -53,7 +51,7 @@ function App() {
                   {/* Protected routes */}
                   <Route path="/" element={
                     <ProtectedRoute>
-                      <HomePage />
+                      <Navigate to="/sweeps" replace />
                     </ProtectedRoute>
                   } />
                   <Route path="/sweep/:id" element={

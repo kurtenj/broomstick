@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAllSweeps, deleteSweep, createSweep, getShareLink, updateSweepTitle } from '@/services/sweepService';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getUserSweeps, deleteSweep, createSweep, getShareLink, updateSweepTitle } from '@/services/sweepService';
 import { Sweep } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2, Link as LinkIcon, Pencil, MoreHorizontal, Check } from 'lucide-react';
@@ -31,21 +31,21 @@ export function SweepsPage() {
 
   const fetchSweeps = async () => {
     try {
+      if (!currentUser?.email) {
+        setError('User not logged in or email unavailable.');
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       setError(null);
-      const allSweeps = await getAllSweeps();
+      const userSweeps = await getUserSweeps(currentUser.email);
       
-      // Filter sweeps by current user if available
-      const filteredSweeps = currentUser 
-        ? allSweeps.filter(sweep => !sweep.createdBy || sweep.createdBy === currentUser.email || sweep.createdBy === currentUser.uid)
-        : allSweeps;
-        
-      setSweeps(filteredSweeps.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      setSweeps(userSweeps.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
       
-      // If there are no sweeps, navigate back to the homepage
-      if (filteredSweeps.length === 0) {
-        navigate('/');
-      }
+      // Consider removing this navigation or changing its behavior
+      // if (userSweeps.length === 0) { 
+      //   console.log('User has no sweeps.'); 
+      // }
     } catch (err) {
       console.error('Error fetching sweeps:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch sweeps');
