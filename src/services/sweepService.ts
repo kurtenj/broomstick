@@ -30,19 +30,14 @@ export const createSweep = async (title?: string): Promise<string> => {
     const sweepRef = doc(collection(db, 'sweeps'));
     console.log('Document reference created:', sweepRef.id);
     
-    const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setDate(expiresAt.getDate() + 3); // Expires in 3 days
-
     // Get current user
     const auth = getAuth();
     const user = auth.currentUser;
 
     const sweep: Omit<Sweep, 'id'> = {
-      createdAt: now,
-      expiresAt,
+      createdAt: new Date(),
       todos: [],
-      isPublic: false,
+      isPublic: true,
       publicAccessToken: generatePublicToken(),
       ...(title && { title }),
       ...(user && { createdBy: user.email || user.uid }),
@@ -55,7 +50,6 @@ export const createSweep = async (title?: string): Promise<string> => {
     await setDoc(sweepRef, {
       ...sweep,
       createdAt: serverTimestamp(),
-      expiresAt: Timestamp.fromDate(expiresAt),
     });
     console.log('Document successfully written to Firestore');
 
@@ -79,7 +73,6 @@ export const getSweep = async (id: string): Promise<Sweep | null> => {
   return {
     id: sweepSnap.id,
     createdAt: data.createdAt.toDate(),
-    expiresAt: data.expiresAt.toDate(),
     title: data.title,
     todos: data.todos || [],
     isPublic: data.isPublic || false,
@@ -91,22 +84,24 @@ export const getSweep = async (id: string): Promise<Sweep | null> => {
 
 // Get a sweep by public token
 export const getSweepByToken = async (token: string): Promise<Sweep | null> => {
+  console.warn('getSweepByToken is likely deprecated; use subscribeSweepByToken for real-time updates.');
+  const sweepsRef = collection(db, 'sweeps');
+  const q = query(sweepsRef, where("publicAccessToken", "==", token), where("isPublic", "==", true));
+  
   try {
-    const sweepsRef = collection(db, 'sweeps');
-    const q = query(sweepsRef, where('publicAccessToken', '==', token), where('isPublic', '==', true));
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
       return null;
     }
     
+    // Assuming tokens are unique
     const doc = querySnapshot.docs[0];
     const data = doc.data();
     
     return {
       id: doc.id,
       createdAt: data.createdAt.toDate(),
-      expiresAt: data.expiresAt.toDate(),
       title: data.title,
       todos: data.todos || [],
       isPublic: data.isPublic,
@@ -115,8 +110,8 @@ export const getSweepByToken = async (token: string): Promise<Sweep | null> => {
       modifiedBy: data.modifiedBy
     };
   } catch (error) {
-    console.error('Error getting sweep by token:', error);
-    return null;
+    console.error("Error fetching sweep by token:", error);
+    throw error; // Or return null
   }
 };
 
@@ -137,10 +132,9 @@ export const subscribeSweep = (
     callback({
       id: doc.id,
       createdAt: data.createdAt.toDate(),
-      expiresAt: data.expiresAt.toDate(),
       title: data.title,
       todos: data.todos || [],
-      isPublic: data.isPublic || false,
+      isPublic: data.isPublic === undefined ? true : data.isPublic,
       publicAccessToken: data.publicAccessToken,
       createdBy: data.createdBy,
       modifiedBy: data.modifiedBy
@@ -159,27 +153,21 @@ export const toggleSweepPublicAccess = async (sweepId: string, isPublic: boolean
   await updateDoc(sweepRef, { 
     isPublic,
     modifiedBy: user?.email || user?.uid || 'anonymous',
-    ...(isPublic && { publicAccessToken: generatePublicToken() })
   });
 };
 
 // Get share link for a sweep
-export const getShareLink = async (sweepId: string): Promise<string> => {
+export const getShareLink = async (sweepId: string): Promise<string | null> => {
   const sweep = await getSweep(sweepId);
   
   if (!sweep) {
-    throw new Error('Sweep not found');
+    console.error('Sweep not found for share link');
+    return null;
   }
   
-  if (!sweep.isPublic) {
-    // Make the sweep public first
-    await toggleSweepPublicAccess(sweepId, true);
-    // Get the updated sweep
-    const updatedSweep = await getSweep(sweepId);
-    if (!updatedSweep || !updatedSweep.publicAccessToken) {
-      throw new Error('Failed to generate share link');
-    }
-    return `${window.location.origin}/shared/${updatedSweep.publicAccessToken}`;
+  if (!sweep.publicAccessToken) {
+    console.error('Public access token missing for sweep:', sweepId);
+    return null;
   }
   
   return `${window.location.origin}/shared/${sweep.publicAccessToken}`;
@@ -425,25 +413,6 @@ export const deleteTodoItem = async (
   console.log(`Todo item ${todoId} deleted successfully`);
 };
 
-// Extend a sweep's expiration date
-export const extendSweep = async (sweepId: string): Promise<void> => {
-  const sweepRef = doc(db, 'sweeps', sweepId);
-  const sweepSnap = await getDoc(sweepRef);
-
-  if (!sweepSnap.exists()) {
-    throw new Error('Sweep not found');
-  }
-
-  const data = sweepSnap.data();
-  const currentExpiresAt = data.expiresAt.toDate();
-  const newExpiresAt = new Date(currentExpiresAt);
-  newExpiresAt.setDate(newExpiresAt.getDate() + 3); // Extend by 3 days
-
-  await updateDoc(sweepRef, {
-    expiresAt: Timestamp.fromDate(newExpiresAt),
-  });
-};
-
 // Check if Firestore is properly set up
 export const checkFirestoreSetup = async (): Promise<boolean> => {
   try {
@@ -505,7 +474,6 @@ export const getAllSweeps = async (): Promise<Sweep[]> => {
       sweeps.push({
         id: doc.id,
         createdAt: data.createdAt.toDate(),
-        expiresAt: data.expiresAt.toDate(),
         title: data.title || 'Untitled Sweep',
         todos: data.todos || [],
       });
@@ -545,4 +513,57 @@ export const updateSweepTitle = async (sweepId: string, title: string): Promise<
     console.error('Error updating sweep title:', error);
     throw error;
   }
+};
+
+// Subscribe to a sweep's changes using the public access token
+export const subscribeSweepByToken = (
+  token: string,
+  callback: (sweep: Sweep | null) => void
+) => {
+  const sweepsRef = collection(db, 'sweeps');
+  const q = query(sweepsRef, where("publicAccessToken", "==", token));
+
+  // onSnapshot listens for real-time updates
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    if (querySnapshot.empty) {
+      // No sweep found with this token, or it was deleted
+      console.log('No sweep found or access denied for token:', token);
+      callback(null);
+      return;
+    }
+
+    // Assuming tokens are unique, we should only get one document.
+    // If somehow multiple exist, we'll just use the first one.
+    if (querySnapshot.docs.length > 1) {
+      console.warn('Multiple sweeps found for the same public access token:', token);
+    }
+    
+    const doc = querySnapshot.docs[0];
+    const data = doc.data();
+
+    // Check if the sweep is actually public (it should be by default now)
+    if (data.isPublic === false) { // Explicitly check for false
+      console.warn('Sweep found by token is not public:', doc.id);
+      callback(null); // Treat as not found if not public
+      return;
+    }
+
+    callback({
+      id: doc.id,
+      createdAt: data.createdAt?.toDate(), // Add safe navigation
+      title: data.title,
+      todos: data.todos || [],
+      isPublic: true, // We already checked this or assume true
+      publicAccessToken: data.publicAccessToken,
+      createdBy: data.createdBy,
+      modifiedBy: data.modifiedBy
+    });
+  }, (error) => {
+    console.error("Error subscribing to sweep by token:", error);
+    // Potentially call callback with null or a specific error state
+    callback(null);
+  });
+
+  // Return the unsubscribe function for cleanup
+  return unsubscribe;
 }; 

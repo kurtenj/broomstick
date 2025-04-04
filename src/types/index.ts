@@ -9,7 +9,6 @@ export interface TodoItem {
 export interface Sweep {
   id: string;
   createdAt: Date;
-  expiresAt: Date;
   title?: string;
   todos: TodoItem[];
   isPublic?: boolean;

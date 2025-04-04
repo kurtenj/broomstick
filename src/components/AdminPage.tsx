@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { addUserToWhitelist, isUserAdmin } from '@/services/userService';
+import { AnimatedBroomLoader } from './AnimatedBroomLoader';
 
 interface AuthorizedUser {
   email: string;
@@ -173,8 +174,8 @@ export function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] pt-16">
+        <AnimatedBroomLoader />
       </div>
     );
   }

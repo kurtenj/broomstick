@@ -24,23 +24,19 @@ export function LoginPage() {
   }, [currentUser, isAuthorized, navigate, from]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-black/75 fixed inset-0 z-40">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
         <div className="text-center">
           <div className="flex justify-center">
             <img 
               src="/images/broomstick-logo.svg" 
               alt="Broomstick" 
-              className="h-16 w-auto"
+              className="h-12 w-auto mb-6"
             />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">Sign in to Broomstick</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Access your design sweeps and collaborate with your team
-          </p>
         </div>
 
-        <div className="mt-8 space-y-4">
+        <div className="mt-8 space-y-2">
           <Button 
             onClick={signInWithGoogle}
             className="w-full flex items-center justify-center gap-2"

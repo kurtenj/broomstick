@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { getSweepByToken, updateTodoItem } from '@/services/sweepService';
-import { Sweep, TodoItem } from '@/types';
+import { SweepView } from './SweepView';
+import { subscribeSweepByToken, updateTodoItem } from '@/services/sweepService';
+import { Sweep } from '@/types';
+import { AnimatedBroomLoader } from '@/components/AnimatedBroomLoader';
 
 export function SharedSweepPage() {
   const { token } = useParams<{ token: string }>();
@@ -11,57 +12,50 @@ export function SharedSweepPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load sweep data
+  // Subscribe to sweep data using token
   useEffect(() => {
-    const loadSweep = async () => {
-      if (!token) {
-        setError('Invalid share link');
-        setLoading(false);
-        return;
+    if (!token) {
+      setError('Invalid share link token');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const unsubscribe = subscribeSweepByToken(token, (sweepData) => {
+      if (sweepData) {
+        setSweep(sweepData);
+        setError(null); // Clear error if data loads successfully
+      } else {
+        // Handle case where sweep is not found, not public, or error occurs
+        setSweep(null);
+        setError('Sweep not found, access denied, or an error occurred.'); 
       }
+      setLoading(false);
+    });
 
-      try {
-        const sweepData = await getSweepByToken(token);
-        
-        if (!sweepData) {
-          setError('Sweep not found or access denied');
-        } else {
-          setSweep(sweepData);
-        }
-      } catch (err) {
-        console.error('Error loading sweep:', err);
-        setError('Failed to load sweep data');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Cleanup subscription on component unmount
+    return () => unsubscribe();
 
-    loadSweep();
-  }, [token]);
+  }, [token]); // Re-run effect if token changes
 
-  // Handle todo item completion toggle
+  // Handle todo item completion toggle (remove optimistic update)
   const handleToggleComplete = async (todoId: string, completed: boolean) => {
     if (!sweep) return;
     
     try {
+      // Update in Firestore - the listener will update the UI
       await updateTodoItem(sweep.id, todoId, { completed });
       
-      // Update local state
-      setSweep({
-        ...sweep,
-        todos: sweep.todos.map(todo => 
-          todo.id === todoId ? { ...todo, completed } : todo
-        )
-      });
     } catch (err) {
       console.error('Error updating todo item:', err);
+      // Optionally: Show a temporary error message to the user
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <AnimatedBroomLoader />
       </div>
     );
   }
@@ -84,65 +78,11 @@ export function SharedSweepPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">
-            {sweep.title || 'Untitled Sweep'}
-          </h1>
-          <div className="text-sm text-gray-500">
-            Shared view
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <p className="text-sm text-gray-500">
-            Expires: {sweep.expiresAt.toLocaleDateString()}
-          </p>
-        </div>
-
-        {sweep.todos.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No items in this sweep</p>
-          </div>
-        ) : (
-          <ul className="space-y-4">
-            {sweep.todos.map((todo: TodoItem) => (
-              <li 
-                key={todo.id} 
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <Checkbox 
-                    id={`todo-${todo.id}`}
-                    checked={todo.completed}
-                    onCheckedChange={(checked) => 
-                      handleToggleComplete(todo.id, checked === true)
-                    }
-                  />
-                  <div className="flex-1">
-                    <label 
-                      htmlFor={`todo-${todo.id}`}
-                      className={`text-lg ${todo.completed ? 'line-through text-gray-500' : ''}`}
-                    >
-                      {todo.text}
-                    </label>
-                    
-                    {todo.screenshotUrl && (
-                      <div className="mt-3">
-                        <img 
-                          src={todo.screenshotUrl} 
-                          alt="Screenshot" 
-                          className="max-w-full rounded-md border border-gray-200"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <SweepView 
+        sweep={sweep}
+        isPublicView={true}
+        onToggleComplete={handleToggleComplete}
+      />
     </div>
   );
 } 
