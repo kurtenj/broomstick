@@ -40,8 +40,8 @@ export const createSweep = async (title?: string): Promise<string> => {
       isPublic: true,
       publicAccessToken: generatePublicToken(),
       ...(title && { title }),
-      ...(user && { createdBy: user.email || user.uid }),
-      ...(user && { modifiedBy: user.email || user.uid }),
+      createdBy: user?.email || 'anonymous',
+      modifiedBy: user?.email || 'anonymous',
     };
 
     console.log('Preparing sweep data:', sweep);
